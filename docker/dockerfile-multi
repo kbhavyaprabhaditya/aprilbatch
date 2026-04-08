@@ -1,0 +1,41 @@
+# ============================================================
+# MULTI-STAGE Dockerfile – Assignment 2
+# Stage 1: Build with full Maven + JDK (heavy image, discarded)
+# Stage 2: Run with JRE-only Alpine (tiny final image)
+# Result: only the compiled JAR is copied – no build tools remain
+# ============================================================
+
+# --- Stage 1: BUILD ---
+FROM maven:3.9.6-eclipse-temurin-11 AS build
+
+WORKDIR /app
+
+# Copy dependency manifest (layer-cache friendly)
+COPY pom.xml .
+
+# Download dependencies
+RUN mvn dependency:go-offline -q
+
+# Copy source code
+COPY src ./src
+
+# Compile and package
+RUN mvn clean package -DskipTests -q
+
+# --- Stage 2: RUN ---
+FROM eclipse-temurin:11-jre-alpine AS runtime
+
+LABEL maintainer="bhavyaprabhaditya"
+LABEL description="Java HTTP Web Server – Assignment 2 (Multi Stage)"
+LABEL version="v1"
+
+WORKDIR /app
+
+# Copy ONLY the JAR from the build stage — no JDK, no Maven, no source
+COPY --from=build /app/target/java-web-app.jar java-web-app.jar
+
+# Expose port
+EXPOSE 9090
+
+# Run
+ENTRYPOINT ["java", "-jar", "java-web-app.jar"]

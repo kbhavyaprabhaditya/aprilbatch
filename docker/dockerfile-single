@@ -1,0 +1,31 @@
+# ============================================================
+# SINGLE-STAGE Dockerfile – Assignment 2
+# Everything (JDK + Maven + source + JAR) stays in one image
+# Result: very large image because the full JDK/Maven toolchain
+#         is bundled together with the application
+# ============================================================
+FROM maven:3.9.6-eclipse-temurin-11
+
+LABEL maintainer="bhavyaprabhaditya"
+LABEL description="Java HTTP Web Server – Assignment 2 (Single Stage)"
+LABEL version="v1"
+
+WORKDIR /app
+
+# Copy dependency manifest
+COPY pom.xml .
+
+# Download dependencies
+RUN mvn dependency:go-offline -q
+
+# Copy source code
+COPY src ./src
+
+# Compile and package
+RUN mvn clean package -DskipTests -q
+
+# Expose port
+EXPOSE 9090
+
+# Run the JAR directly from the target folder
+ENTRYPOINT ["java", "-jar", "target/java-web-app.jar"]

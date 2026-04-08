@@ -1,0 +1,9 @@
+FROM nginx:latest
+
+LABEL maintainer="bhavyaprabhaditya"
+LABEL description="Nginx static web server"
+LABEL version="v1"
+
+COPY index.html /usr/share/nginx/html/index.html
+
+EXPOSE 80
