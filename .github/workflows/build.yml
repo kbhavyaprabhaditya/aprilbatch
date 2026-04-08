@@ -27,15 +27,15 @@ jobs:
         with:
           fetch-depth: 0          # full history needed by SonarCloud
 
-      - name: Set up JDK 11
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
           cache: maven
 
       - name: Compile (needed for sonar java.binaries)
-        run: mvn clean compile -q
+        run: mvn clean compile -q -Dmaven.compiler.source=11 -Dmaven.compiler.target=11
 
       - name: SonarCloud Scan
         env:
