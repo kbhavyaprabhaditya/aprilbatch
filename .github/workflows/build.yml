@@ -106,7 +106,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push Java Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -116,8 +116,18 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/assignment:v${{ github.run_number }}
             ${{ secrets.DOCKERHUB_USERNAME }}/assignment:latest
 
+      - name: Build and push Nginx Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/
+          file: docker/dockerfile-nginx
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/nginx-web:v${{ github.run_number }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/nginx-web:latest
+
       - name: Image summary
         run: |
-          echo "Docker image pushed:"
+          echo "Docker images pushed:"
           echo "  ${{ secrets.DOCKERHUB_USERNAME }}/assignment:v${{ github.run_number }}"
-          echo "  ${{ secrets.DOCKERHUB_USERNAME }}/assignment:latest"
+          echo "  ${{ secrets.DOCKERHUB_USERNAME }}/nginx-web:v${{ github.run_number }}"
