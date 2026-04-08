@@ -18,8 +18,8 @@
         <maven.compiler.target>11</maven.compiler.target>
         
         <!-- SonarCloud properties -->
-        <sonar.projectKey>jatinbhalla1991_aprildemo</sonar.projectKey>
-        <sonar.organization>jatinbhalla1991</sonar.organization>
+        <sonar.projectKey>kbhavyaprabhaditya_aprilbatch</sonar.projectKey>
+        <sonar.organization>kbhavyaprabhaditya</sonar.organization>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     </properties>
 
@@ -44,9 +44,10 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.example.app.App</mainClass>
+                            <mainClass>com.example.app.WebServer</mainClass>
                         </manifest>
                     </archive>
+                    <finalName>java-web-app</finalName>
                 </configuration>
             </plugin>
             

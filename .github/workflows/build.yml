@@ -40,12 +40,7 @@ jobs:
       - name: SonarCloud Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          mvn sonar:sonar \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.projectKey=jatinbhalla1991_aprildemo \
-            -Dsonar.organization=jatinbhalla1991 \
-            -Dsonar.host.url=https://sonarcloud.io
+        run: mvn sonar:sonar -Dsonar.token=${{ secrets.SONAR_TOKEN }}
 
   # ---------------------------------------------------------------
   # JOB 2: Build package and store artifact
