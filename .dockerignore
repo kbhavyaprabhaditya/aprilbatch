@@ -1,0 +1,53 @@
+# Docker Multistage Build Exclusions
+
+# Git files
+.git
+.gitignore
+.github
+
+# IDE files
+.idea
+.vscode
+*.iml
+*.ipr
+*.iws
+
+# Build artifacts (will be built inside Docker)
+target/
+*.class
+*.jar
+*.war
+
+# Maven wrapper (optional - include if you want to use it in Docker)
+.mvn/wrapper/maven-wrapper.jar
+
+# Documentation
+*.md
+README.md
+DUPLICATION-GUIDE.md
+
+# Terraform files
+terraform/
+*.tf
+*.tfvars
+*.tfstate
+*.tfstate.backup
+
+# Test files
+test/
+*.test
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# SonarQube
+.sonar/
+sonar-project.properties
+
+# Other
+important links.txt
