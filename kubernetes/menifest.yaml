@@ -30,7 +30,7 @@ spec:
     spec:
       containers:
         - name: java-web-app
-          image: 980637429038.dkr.ecr.ap-south-1.amazonaws.com/bhavyaprabhaditya-app:v1
+          image: 980637429038.dkr.ecr.ap-south-1.amazonaws.com/bhavyaprabhaditya-app:v2
           ports:
             - containerPort: 9090
           env:
@@ -46,11 +46,11 @@ spec:
               value: "6379"
           resources:
             requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
               cpu: "250m"
               memory: "256Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
           readinessProbe:
             httpGet:
               path: /health

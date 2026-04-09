@@ -40,12 +40,8 @@ public class WebServer {
                 + "<html>"
                 + "<head><title>Java Web App</title></head>"
                 + "<body>"
-                + "<h1>Java Web App – Full Stack Deployment</h1>"
-                + "<p>Java Version: " + System.getProperty("java.version") + "</p>"
-                + "<hr>"
-                + "<h2>Connected Services</h2>"
-                + "<p><b>MySQL:</b> " + DB_HOST + ":" + DB_PORT + " / db: " + DB_NAME + "</p>"
-                + "<p><b>Redis:</b> " + REDIS_HOST + ":" + REDIS_PORT + "</p>"
+                + "<p>Hello, this is Prabhaditya.</p>"
+                + "<p>This Java application is running in a docker container</p>"
                 + "</body>"
                 + "</html>";
             sendResponse(exchange, 200, "text/html; charset=UTF-8", html);
