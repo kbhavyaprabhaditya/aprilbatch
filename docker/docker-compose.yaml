@@ -45,7 +45,8 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.28.0.10  # static IP for java app
     restart: on-failure
 
   # -----------------------------------------------------------
@@ -70,7 +71,8 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.28.0.20  # static IP for mysql
     restart: unless-stopped
 
   # -----------------------------------------------------------
@@ -91,7 +93,8 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.28.0.30  # static IP for redis
     restart: unless-stopped
 
 # =============================================================
@@ -106,9 +109,25 @@ volumes:
     name: assignment_app_logs
 
 # =============================================================
-# Network
+# Custom Bridge Network
+# Subnet : 172.28.0.0/16
+# Gateway: 172.28.0.1
+# Static IPs assigned to each container for predictable DNS
+#   app   -> 172.28.0.10
+#   db    -> 172.28.0.20
+#   redis -> 172.28.0.30
 # =============================================================
 networks:
   app-network:
     name: assignment-network
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1
+          ip_range: 172.28.0.0/24
+    driver_opts:
+      com.docker.network.bridge.name: assignment-br0   # custom bridge name visible in host OS
+      com.docker.network.bridge.enable_icc: "true"     # inter-container communication on
+      com.docker.network.bridge.enable_ip_masquerade: "true"
