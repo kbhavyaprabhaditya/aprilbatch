@@ -2,14 +2,14 @@
 cluster_name = "demo-eks-cluster1"
 
 # AWS Region
-region = "us-east-1"
+region = "ap-south-1"
 
 # Kubernetes Version
 kubernetes_version = "1.32"
 
 # VPC Configuration
 vpc_cidr           = "10.0.0.0/16"
-availability_zones = ["us-east-1a", "us-east-1b"]
+availability_zones = ["ap-south-1a", "ap-south-1b"]
 
 # Node Group Configuration
 instance_types     = ["t3.medium"]

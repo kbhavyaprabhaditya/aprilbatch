@@ -1,3 +1,3 @@
-bucket = "my-terraform-state-1991"
+bucket = "bhavya-terraform-state-6672"
 key    = "prod/terraform.tfstate"
-region = "us-east-1"
+region = "ap-south-1"
