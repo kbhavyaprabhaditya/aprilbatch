@@ -4,60 +4,154 @@ metadata:
   name: grafana-dashboards
   namespace: monitoring
 data:
-  sample-app-dashboard.json: |
+  java-web-app-dashboard.json: |
     {
-      "dashboard": {
-        "title": "Sample Application Metrics",
-        "tags": ["sample", "demo"],
-        "timezone": "browser",
-        "schemaVersion": 16,
-        "version": 0,
-        "refresh": "5s",
-        "panels": [
-          {
-            "title": "HTTP Request Rate",
-            "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
-            "targets": [
-              {
-                "expr": "rate(http_requests_total{job=\"sample-app\"}[1m])",
-                "legendFormat": "{{method}} {{code}}"
-              }
-            ],
-            "type": "graph",
-            "id": 1
+      "title": "Java Web App – Prabhaditya",
+      "uid": "java-web-app",
+      "tags": ["java", "bhavyaprabhaditya"],
+      "timezone": "browser",
+      "schemaVersion": 36,
+      "version": 1,
+      "refresh": "10s",
+      "time": {"from": "now-15m", "to": "now"},
+      "panels": [
+        {
+          "id": 1,
+          "title": "HTTP Requests per Endpoint (Bar Chart)",
+          "type": "barchart",
+          "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+          "options": {
+            "orientation": "vertical",
+            "xTickLabelRotation": 0,
+            "groupWidth": 0.7,
+            "barWidth": 0.97,
+            "tooltipDisplayMode": "multi"
           },
-          {
-            "title": "HTTP Request Duration",
-            "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
-            "targets": [
-              {
-                "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"sample-app\"}[1m]))",
-                "legendFormat": "95th percentile"
-              }
-            ],
-            "type": "graph",
-            "id": 2
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {"fillOpacity": 80, "lineWidth": 1}
+            }
           },
-          {
-            "title": "Active Pods",
-            "gridPos": {"x": 0, "y": 8, "w": 6, "h": 6},
-            "targets": [
-              {
-                "expr": "count(up{job=\"sample-app\"} == 1)"
-              }
-            ],
-            "type": "singlestat",
-            "id": 3
+          "targets": [
+            {
+              "expr": "http_requests_total{job=\"java-web-app\"}",
+              "legendFormat": "{{endpoint}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "title": "HTTP Request Rate per Endpoint (Bar Chart)",
+          "type": "barchart",
+          "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+          "options": {
+            "orientation": "vertical",
+            "groupWidth": 0.7,
+            "barWidth": 0.97,
+            "tooltipDisplayMode": "multi"
           },
-          {
-            "title": "Total Requests",
-            "gridPos": {"x": 6, "y": 8, "w": 6, "h": 6},
-            "targets": [
-              {
-                "expr": "sum(http_requests_total{job=\"sample-app\"})"
-              }
-            ],
-            "type": "singlestat",
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {"fillOpacity": 80}
+            },
+            "overrides": []
+          },
+          "targets": [
+            {
+              "expr": "rate(http_requests_total{job=\"java-web-app\"}[1m])",
+              "legendFormat": "{{endpoint}} req/s",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Total Requests (All Endpoints)",
+          "type": "stat",
+          "gridPos": {"x": 0, "y": 8, "w": 6, "h": 4},
+          "options": {"colorMode": "background", "graphMode": "area"},
+          "targets": [
+            {
+              "expr": "http_requests_total{job=\"java-web-app\", endpoint=\"all\"}",
+              "legendFormat": "Total",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "title": "App Uptime (seconds)",
+          "type": "stat",
+          "gridPos": {"x": 6, "y": 8, "w": 6, "h": 4},
+          "options": {"colorMode": "background", "graphMode": "none"},
+          "targets": [
+            {
+              "expr": "app_uptime_seconds{job=\"java-web-app\"}",
+              "legendFormat": "Uptime",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "title": "JVM Memory Used (MB)",
+          "type": "stat",
+          "gridPos": {"x": 12, "y": 8, "w": 6, "h": 4},
+          "options": {"colorMode": "background", "graphMode": "area"},
+          "fieldConfig": {
+            "defaults": {
+              "unit": "decmbytes"
+            }
+          },
+          "targets": [
+            {
+              "expr": "jvm_memory_used_bytes{job=\"java-web-app\"} / 1024 / 1024",
+              "legendFormat": "Used MB",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "title": "JVM Memory Overview (Bar Chart)",
+          "type": "barchart",
+          "gridPos": {"x": 0, "y": 12, "w": 24, "h": 8},
+          "options": {
+            "orientation": "vertical",
+            "groupWidth": 0.7,
+            "barWidth": 0.97,
+            "tooltipDisplayMode": "multi"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {"mode": "palette-classic"},
+              "custom": {"fillOpacity": 80},
+              "unit": "decmbytes"
+            }
+          },
+          "targets": [
+            {
+              "expr": "jvm_memory_used_bytes{job=\"java-web-app\"} / 1024 / 1024",
+              "legendFormat": "Used",
+              "refId": "A"
+            },
+            {
+              "expr": "jvm_memory_total_bytes{job=\"java-web-app\"} / 1024 / 1024",
+              "legendFormat": "Total",
+              "refId": "B"
+            },
+            {
+              "expr": "jvm_memory_max_bytes{job=\"java-web-app\"} / 1024 / 1024",
+              "legendFormat": "Max",
+              "refId": "C"
+            }
+          ]
+        }
+      ]
+    }
             "id": 4
           },
           {

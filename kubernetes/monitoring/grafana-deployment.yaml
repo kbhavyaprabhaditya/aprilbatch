@@ -33,6 +33,11 @@ spec:
           mountPath: /var/lib/grafana
         - name: grafana-datasources
           mountPath: /etc/grafana/provisioning/datasources
+        - name: grafana-dashboard-provisioner
+          mountPath: /etc/grafana/provisioning/dashboards
+        - name: grafana-dashboards
+          mountPath: /var/lib/grafana/dashboards/java-web-app-dashboard.json
+          subPath: java-web-app-dashboard.json
         resources:
           requests:
             memory: "256Mi"
@@ -46,6 +51,12 @@ spec:
       - name: grafana-datasources
         configMap:
           name: grafana-datasources
+      - name: grafana-dashboard-provisioner
+        configMap:
+          name: grafana-dashboard-provisioner
+      - name: grafana-dashboards
+        configMap:
+          name: grafana-dashboards
 ---
 apiVersion: v1
 kind: Service

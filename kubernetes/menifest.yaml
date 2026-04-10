@@ -30,7 +30,7 @@ spec:
     spec:
       containers:
         - name: java-web-app
-          image: 980637429038.dkr.ecr.ap-south-1.amazonaws.com/bhavyaprabhaditya-app:v2
+          image: 980637429038.dkr.ecr.ap-south-1.amazonaws.com/bhavyaprabhaditya-app:v3
           ports:
             - containerPort: 9090
           env:
