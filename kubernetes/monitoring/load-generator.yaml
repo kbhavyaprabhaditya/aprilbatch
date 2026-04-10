@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: load-generator-script
+  namespace: monitoring
+data:
+  generate-load.sh: |
+    #!/bin/sh
+    while true; do
+      wget -q -O- http://sample-app:8080/ > /dev/null 2>&1
+      sleep 0.5
+    done
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-generator
+  namespace: monitoring
+  labels:
+    app: load-generator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: load-generator
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      containers:
+      - name: load-generator
+        image: busybox:latest
+        command: ["/bin/sh"]
+        args: ["/scripts/generate-load.sh"]
+        volumeMounts:
+        - name: script
+          mountPath: /scripts
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+      volumes:
+      - name: script
+        configMap:
+          name: load-generator-script
+          defaultMode: 0755
