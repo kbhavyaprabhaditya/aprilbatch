@@ -1,0 +1,73 @@
+# ---------------------------------------------------------------
+# Default values for java-web-app Helm chart.
+# Secrets are NOT stored here — they are created separately via
+# kubectl and referenced by name (secretName below).
+# ---------------------------------------------------------------
+
+image:
+  repository: 980637429038.dkr.ecr.ap-south-1.amazonaws.com/bhavyaprabhaditya-app
+  pullPolicy: Always
+
+# ---------------------------------------------------------------
+# Blue-Green deployment control
+#   activeSlot   — which slot receives live traffic (blue | green)
+#   blue.enabled — whether the blue deployment exists
+#   green.enabled— whether the green deployment exists
+# ---------------------------------------------------------------
+activeSlot: blue
+
+blue:
+  enabled: true
+  tag: v3
+  replicaCount: 2
+
+green:
+  enabled: false
+  tag: v3
+  replicaCount: 2
+
+# ---------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------
+service:
+  type: LoadBalancer
+  port: 8080
+  targetPort: 9090
+
+# ---------------------------------------------------------------
+# Resource requests / limits
+# ---------------------------------------------------------------
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+# ---------------------------------------------------------------
+# Health probe settings
+# ---------------------------------------------------------------
+probes:
+  path: /health
+  port: 9090
+  readiness:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+  liveness:
+    initialDelaySeconds: 20
+    periodSeconds: 10
+
+# ---------------------------------------------------------------
+# Name of the Kubernetes Secret holding app credentials.
+# Create this secret separately (never commit secret values):
+#
+#   kubectl create secret generic java-web-app-secret \
+#     --from-literal=DB_HOST=<host> \
+#     --from-literal=DB_PORT=3306  \
+#     --from-literal=DB_NAME=<db>  \
+#     --from-literal=REDIS_HOST=<host> \
+#     --from-literal=REDIS_PORT=6379 \
+#     -n bhavyaprabhaditya
+# ---------------------------------------------------------------
+secretName: java-web-app-secret

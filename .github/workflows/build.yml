@@ -134,12 +134,19 @@ jobs:
           echo "  ${{ secrets.DOCKERHUB_USERNAME }}/nginx-web:v${{ github.run_number }}"
 
   # ---------------------------------------------------------------
-  # JOB 4: Push to ECR and Deploy to EKS (Team2-eks-cluster1)
-  # Namespace: bhavyaprabhaditya
-  # Image tag = v<run_number> — new tag on every successful run
+  # JOB 4: Push to ECR and deploy to EKS using Helm + Blue-Green
+  #
+  # Blue-Green strategy:
+  #   1. Build and push new image tag to ECR
+  #   2. Create / update K8s secret from GitHub Secrets (no secrets in files)
+  #   3. Detect current active slot (blue|green)
+  #   4. Deploy new image to the INACTIVE slot (zero downtime)
+  #   5. Health-check new slot pods
+  #   6. Switch service selector → instant traffic cut-over
+  #   7. Scale down old slot
   # ---------------------------------------------------------------
   deploy:
-    name: Deploy to EKS
+    name: Deploy to EKS (Helm Blue-Green)
     runs-on: ubuntu-latest
     needs: docker
 
@@ -185,49 +192,128 @@ jobs:
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
 
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
       - name: Update kubeconfig for EKS
         run: |
           aws eks update-kubeconfig \
             --region ${{ env.AWS_REGION }} \
             --name ${{ env.EKS_CLUSTER }}
 
-      - name: Update image tag in manifest
+      # Create or update the K8s secret from GitHub Secrets.
+      # --dry-run=client | kubectl apply makes this idempotent.
+      # Secret values NEVER appear in any committed file.
+      - name: Create / update Kubernetes Secret
         run: |
-          sed -i "s|${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:.*|${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}|g" \
-            kubernetes/menifest.yaml
+          kubectl create secret generic java-web-app-secret \
+            --from-literal=DB_HOST=${{ secrets.APP_DB_HOST }} \
+            --from-literal=DB_PORT=${{ secrets.APP_DB_PORT }} \
+            --from-literal=DB_NAME=${{ secrets.APP_DB_NAME }} \
+            --from-literal=REDIS_HOST=${{ secrets.APP_REDIS_HOST }} \
+            --from-literal=REDIS_PORT=${{ secrets.APP_REDIS_PORT }} \
+            --namespace=${{ env.NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
 
-      - name: Apply Kubernetes manifests
-        run: kubectl apply -f kubernetes/menifest.yaml
-
-      - name: Wait for rollout
+      - name: Blue-Green Deploy
         run: |
-          kubectl rollout status deployment/java-web-app \
+          set -e
+
+          IMAGE="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+          echo "Deploying image: $IMAGE"
+
+          # ── Step 1: Detect current active slot ──────────────────
+          CURRENT_SLOT=$(kubectl get svc java-web-app-svc \
             -n ${{ env.NAMESPACE }} \
-            --timeout=180s
+            -o jsonpath='{.spec.selector.slot}' 2>/dev/null || echo "none")
 
-      - name: Get LoadBalancer URL
-        run: |
-          echo "Waiting for LoadBalancer to be assigned..."
-          for i in $(seq 1 12); do
-            LB=$(kubectl get svc java-web-app-service \
+          if [ "$CURRENT_SLOT" = "blue" ]; then
+            NEW_SLOT=green
+            OLD_SLOT=blue
+          else
+            NEW_SLOT=blue
+            OLD_SLOT=green
+          fi
+
+          echo "Current active slot: $CURRENT_SLOT  →  New slot: $NEW_SLOT"
+
+          # ── Step 2: First-time install or normal upgrade ─────────
+          if [ "$CURRENT_SLOT" = "none" ]; then
+            echo "First deployment: installing blue slot..."
+            helm upgrade --install java-web-app helm/java-web-app \
+              --namespace ${{ env.NAMESPACE }} \
+              --create-namespace \
+              --set blue.enabled=true \
+              --set blue.tag=${{ env.IMAGE_TAG }} \
+              --set green.enabled=false \
+              --set activeSlot=blue \
+              --timeout=3m
+          else
+            # Get the current OLD slot's tag so we preserve it
+            OLD_TAG=$(helm get values java-web-app \
               -n ${{ env.NAMESPACE }} \
-              -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
-            if [ -n "$LB" ]; then
-              echo "Application is live at: http://${LB}"
-              echo "Health check: http://${LB}/health"
-              break
-            fi
-            echo "Attempt $i: LoadBalancer not ready yet, waiting 10s..."
-            sleep 10
-          done
+              --output json | jq -r ".${OLD_SLOT}.tag // \"latest\"")
+
+            # ── Step 3: Deploy new image to inactive slot ─────────
+            echo "Deploying ${{ env.IMAGE_TAG }} to $NEW_SLOT slot..."
+            helm upgrade java-web-app helm/java-web-app \
+              --namespace ${{ env.NAMESPACE }} \
+              --reuse-values \
+              --set ${NEW_SLOT}.enabled=true \
+              --set ${NEW_SLOT}.tag=${{ env.IMAGE_TAG }} \
+              --set ${OLD_SLOT}.enabled=true \
+              --set ${OLD_SLOT}.tag=${OLD_TAG} \
+              --set activeSlot=${OLD_SLOT} \
+              --timeout=3m
+
+            # ── Step 4: Health-check new pods ────────────────────
+            echo "Waiting for $NEW_SLOT rollout..."
+            kubectl rollout status deployment/java-web-app-${NEW_SLOT} \
+              -n ${{ env.NAMESPACE }} --timeout=120s
+
+            NEW_POD=$(kubectl get pods -n ${{ env.NAMESPACE }} \
+              -l "slot=${NEW_SLOT}" -o jsonpath='{.items[0].metadata.name}')
+            echo "Health-checking pod: $NEW_POD"
+            kubectl exec -n ${{ env.NAMESPACE }} ${NEW_POD} -- \
+              wget -qO- http://localhost:9090/health
+
+            # ── Step 5: Switch traffic to new slot ───────────────
+            echo "Switching traffic to $NEW_SLOT..."
+            helm upgrade java-web-app helm/java-web-app \
+              --namespace ${{ env.NAMESPACE }} \
+              --reuse-values \
+              --set activeSlot=${NEW_SLOT} \
+              --timeout=1m
+
+            # ── Step 6: Scale down old slot ──────────────────────
+            echo "Scaling down old $OLD_SLOT slot..."
+            helm upgrade java-web-app helm/java-web-app \
+              --namespace ${{ env.NAMESPACE }} \
+              --reuse-values \
+              --set ${OLD_SLOT}.enabled=false \
+              --timeout=1m
+          fi
 
       - name: Deployment summary
         run: |
-          echo "=========================================="
-          echo "  Deployment complete!"
-          echo "  Cluster  : ${{ env.EKS_CLUSTER }}"
-          echo "  Namespace: ${{ env.NAMESPACE }}"
-          echo "  Image    : ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
-          echo "=========================================="
-          kubectl get pods -n ${{ env.NAMESPACE }}
-          kubectl get svc  -n ${{ env.NAMESPACE }}
+          echo "========================================================"
+          echo "  Blue-Green deployment complete!"
+          echo "  Cluster   : ${{ env.EKS_CLUSTER }}"
+          echo "  Namespace : ${{ env.NAMESPACE }}"
+          echo "  Image     : ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+          echo "  Helm hist :"
+          helm history java-web-app -n ${{ env.NAMESPACE }}
+          echo ""
+          echo "  Active slot:"
+          kubectl get svc java-web-app-svc -n ${{ env.NAMESPACE }} \
+            -o jsonpath='slot={.spec.selector.slot}{"\n"}'
+          echo ""
+          echo "  Running pods:"
+          kubectl get pods -n ${{ env.NAMESPACE }} -L slot
+          echo ""
+          LB=$(kubectl get svc java-web-app-svc -n ${{ env.NAMESPACE }} \
+            -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pending")
+          echo "  App URL: http://${LB}:8080"
+          echo "========================================================"

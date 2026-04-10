@@ -1,0 +1,22 @@
+Java Web App deployed successfully!
+
+Active traffic slot : {{ .Values.activeSlot | upper }}
+Blue  deployment   : {{ if .Values.blue.enabled }}RUNNING  ({{ .Values.image.repository }}:{{ .Values.blue.tag }}){{ else }}DISABLED{{ end }}
+Green deployment   : {{ if .Values.green.enabled }}RUNNING  ({{ .Values.image.repository }}:{{ .Values.green.tag }}){{ else }}DISABLED{{ end }}
+
+Get the application URL:
+  kubectl get svc {{ include "java-web-app.fullname" . }}-svc -n {{ .Release.Namespace }} \
+    -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+
+Blue-Green switch commands:
+  # Deploy new version to green slot:
+  helm upgrade {{ .Release.Name }} ./helm/java-web-app -n {{ .Release.Namespace }} \
+    --reuse-values --set green.enabled=true --set green.tag=<new-tag>
+
+  # Switch traffic to green:
+  helm upgrade {{ .Release.Name }} ./helm/java-web-app -n {{ .Release.Namespace }} \
+    --reuse-values --set activeSlot=green
+
+  # Cleanup old blue slot:
+  helm upgrade {{ .Release.Name }} ./helm/java-web-app -n {{ .Release.Namespace }} \
+    --reuse-values --set blue.enabled=false

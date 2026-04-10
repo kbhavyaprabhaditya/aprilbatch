@@ -14,11 +14,12 @@ public class WebServer {
     private static final int PORT = 9090;
 
     // Read connection config from environment variables (injected by Docker Compose)
-    private static final String DB_HOST    = System.getenv().getOrDefault("DB_HOST", "not set");
-    private static final String DB_PORT    = System.getenv().getOrDefault("DB_PORT", "3306");
-    private static final String DB_NAME    = System.getenv().getOrDefault("DB_NAME", "not set");
-    private static final String REDIS_HOST = System.getenv().getOrDefault("REDIS_HOST", "not set");
-    private static final String REDIS_PORT = System.getenv().getOrDefault("REDIS_PORT", "6379");
+    private static final String DB_HOST     = System.getenv().getOrDefault("DB_HOST", "not set");
+    private static final String DB_PORT     = System.getenv().getOrDefault("DB_PORT", "3306");
+    private static final String DB_NAME     = System.getenv().getOrDefault("DB_NAME", "not set");
+    private static final String REDIS_HOST  = System.getenv().getOrDefault("REDIS_HOST", "not set");
+    private static final String REDIS_PORT  = System.getenv().getOrDefault("REDIS_PORT", "6379");
+    private static final String APP_VERSION = System.getenv().getOrDefault("APP_VERSION", "v2");
 
     // Prometheus counters — thread-safe atomic counters per endpoint
     static final AtomicLong reqTotal      = new AtomicLong(0);
@@ -58,6 +59,7 @@ public class WebServer {
                 + "<body>"
                 + "<p>Hello, this is Prabhaditya.</p>"
                 + "<p>This Java application is running in a docker container</p>"
+                + "<p><small>App Version: " + APP_VERSION + " | Slot: " + System.getenv().getOrDefault("DEPLOYMENT_SLOT", "unknown") + "</small></p>"
                 + "</body>"
                 + "</html>";
             sendResponse(exchange, 200, "text/html; charset=UTF-8", html);
@@ -74,6 +76,7 @@ public class WebServer {
             reqHealth.incrementAndGet();
             String json = "{"
                 + "\"status\":\"UP\","
+                + "\"version\":\"" + APP_VERSION + "\","
                 + "\"port\":9090,"
                 + "\"db\":\"" + DB_HOST + ":" + DB_PORT + "\","
                 + "\"redis\":\"" + REDIS_HOST + ":" + REDIS_PORT + "\""

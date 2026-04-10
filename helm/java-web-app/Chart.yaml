@@ -1,0 +1,12 @@
+apiVersion: v2
+name: java-web-app
+description: Java Web Application Helm chart with Blue-Green deployment support
+type: application
+version: 1.0.0
+appVersion: "v3"
+maintainers:
+  - name: bhavyaprabhaditya
+keywords:
+  - java
+  - web
+  - blue-green

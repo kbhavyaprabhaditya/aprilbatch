@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "java-web-app.fullname" . }}-svc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "java-web-app.labels" . | nindent 4 }}
+  annotations:
+    # Shows which slot is currently receiving traffic
+    deployment/active-slot: {{ .Values.activeSlot | quote }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    # Selector is the ONLY thing that changes during a blue-green switch.
+    # helm upgrade --set activeSlot=green will redirect all traffic instantly.
+    app: {{ include "java-web-app.name" . }}
+    slot: {{ .Values.activeSlot }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
